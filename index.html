@@ -1,1 +1,457 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WINPLUS - Virtual Football</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#fff;font-family:Arial,sans-serif}
+header{background:#101c30;padding:17px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #26364e}
+.logo{font-size:25px;font-weight:900;color:#20d995}
+button{cursor:pointer;border:0;border-radius:7px;padding:11px;background:#20d995;color:#07140f;font-weight:bold}
+button:disabled{opacity:.5}
+nav{display:flex;gap:8px;padding:12px;background:#111c2d}
+nav button{flex:1;background:#26364e;color:white}
+nav button.active{background:#20d995;color:#07140f}
+.container{padding:14px;max-width:850px;margin:auto}
+.card{background:#142137;border:1px solid #293b55;border-radius:10px;padding:15px;margin-bottom:13px}
+.muted{color:#9caec3;font-size:12px}
+.green{color:#20d995}
+.red{color:#ff6262}
+h3{margin-top:5px}
+input,select{width:100%;padding:12px;background:#0c1728;border:1px solid #344963;color:white;border-radius:7px;margin:6px 0 12px}
+label{font-size:13px;color:#b9c8d9}
+.teams{display:flex;align-items:center;justify-content:space-between;text-align:center;margin:18px 0}
+.team{font-size:17px;font-weight:bold;flex:1}
+.vs{color:#20d995;font-weight:bold;padding:10px}
+.odds{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}
+.odds button{background:#263a54;color:white;border:1px solid #405674;padding:12px 5px}
+.odds button.selected{background:#20d995;color:#07140f;border-color:#20d995}
+.market{font-size:13px;color:#20d995;margin-top:18px;font-weight:bold}
+.status{font-size:11px;padding:5px 8px;border-radius:5px;background:#253b54}
+.status.live{background:#53351d;color:#ffcf82}
+.status.finished{background:#183f34;color:#20d995}
+.hidden{display:none!important}
+.small{font-size:12px}
+.betrow{display:flex;justify-content:space-between;gap:10px;margin:8px 0}
+.score{font-size:25px;font-weight:bold;color:#20d995}
+footer{text-align:center;padding:25px;color:#72849a;font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+ <div class="logo">WINPLUS</div>
+ <button onclick="showAdmin()">ADMIN</button>
+</header>
+
+<nav>
+ <button class="active" onclick="showPage('home',this)">Matches</button>
+ <button onclick="showPage('bets',this)">My Bets</button>
+ <button onclick="showPage('wallet',this)">Wallet</button>
+</nav>
+
+<div class="container">
+
+<section id="home">
+ <div class="card">
+  <div class="green"><b>VIRTUAL FOOTBALL</b></div>
+  <h2>Upcoming Matches</h2>
+  <p class="muted">Select your preferred betting market.</p>
+ </div>
+ <div id="matches"></div>
+</section>
+
+<section id="bets" class="hidden">
+ <h2>My Bets</h2>
+ <div id="betHistory"></div>
+</section>
+
+<section id="wallet" class="hidden">
+ <div class="card">
+  <h2>My Wallet</h2>
+  <p class="muted">Demo balance</p>
+  <h1 class="green" id="balance">GH₵ 100.00</h1>
+  <p class="muted">Simulated credits only. No real deposits or withdrawals.</p>
+ </div>
+</section>
+
+<section id="admin" class="hidden">
+ <div class="card">
+  <h2>Admin Dashboard</h2>
+  <p class="muted">Create matches and lock their results before betting opens.</p>
+  <button onclick="logoutAdmin()" style="background:#344963;color:white">Log out</button>
+ </div>
+
+ <div class="card">
+  <h3>Create New Match</h3>
+
+  <label>Home Team</label>
+  <input id="homeTeam" placeholder="e.g. DOEN FC">
+
+  <label>Away Team</label>
+  <input id="awayTeam" placeholder="e.g. EDD SC">
+
+  <label>Match Date</label>
+  <input type="date" id="matchDate">
+
+  <label>Kickoff Time</label>
+  <input type="time" id="matchTime">
+
+  <h3>1X2 Odds</h3>
+  <div class="odds">
+   <div><label>Home</label><input id="o1" type="number" step=".01" value="1.85"></div>
+   <div><label>Draw</label><input id="ox" type="number" step=".01" value="3.20"></div>
+   <div><label>Away</label><input id="o2" type="number" step=".01" value="2.40"></div>
+  </div>
+
+  <h3>Over / Under 2.5</h3>
+  <div class="odds">
+   <div><label>Over</label><input id="over" type="number" step=".01" value="1.90"></div>
+   <div><label>Under</label><input id="under" type="number" step=".01" value="1.85"></div>
+  </div>
+
+  <h3>Correct Score Odds</h3>
+  <p class="muted">Set odds for the available scores.</p>
+  <div id="scoreOdds"></div>
+
+  <h3>Pre-committed Final Score</h3>
+  <p class="muted">Choose the result before the match is published. It will be locked once betting opens.</p>
+  <div class="odds">
+   <div><label>Home Goals</label><input type="number" id="finalHome" min="0" max="15" value="1"></div>
+   <div><label>Away Goals</label><input type="number" id="finalAway" min="0" max="15" value="0"></div>
+  </div>
+
+  <label>Match duration (minutes)</label>
+  <input type="number" id="duration" value="5" min="1">
+
+  <button onclick="createMatch()" style="width:100%">CREATE MATCH</button>
+ </div>
+
+ <div class="card">
+  <h3>Manage Matches</h3>
+  <div id="adminMatches"></div>
+ </div>
+</section>
+
+</div>
+
+<footer>WINPLUS © 2026 · Virtual Football Demo</footer>
+
+<script>
+const ADMIN_PASSWORD = "winplus2026";
+
+const scoreList = ["0-0","1-0","0-1","1-1","2-0","0-2","2-1","1-2","2-2","3-0","0-3","3-1","1-3","3-2","2-3","Other"];
+
+let data = JSON.parse(localStorage.getItem("winplus_data") || '{"matches":[],"bets":[],"balance":100}');
+
+let selection = null;
+let admin = false;
+
+function save(){
+ localStorage.setItem("winplus_data",JSON.stringify(data));
+}
+
+function money(n){
+ return "GH₵ "+Number(n).toFixed(2);
+}
+
+function scoreInputs(){
+ document.getElementById("scoreOdds").innerHTML =
+ scoreList.map((s,i)=>`
+ <div style="display:flex;align-items:center;gap:10px">
+ <label style="flex:1">${s}</label>
+ <input type="number" step=".01" min="1.01" id="score${i}" value="${i===0?8:i===1?7:10}" style="width:100px">
+ </div>`).join("");
+}
+scoreInputs();
+
+function showPage(page,btn){
+ ["home","bets","wallet","admin"].forEach(p=>
+ document.getElementById(p).classList.add("hidden"));
+ document.getElementById(page).classList.remove("hidden");
+ document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+ if(btn)btn.classList.add("active");
+ render();
+}
+
+function showAdmin(){
+ let pass=prompt("Enter admin password:");
+ if(pass!==ADMIN_PASSWORD){alert("Incorrect password");return;}
+ admin=true;
+ showPage("admin");
+}
+
+function logoutAdmin(){
+ admin=false;
+ showPage("home");
+}
+
+function createMatch(){
+ if(!admin)return;
+
+ let a=homeTeam.value.trim().toUpperCase();
+ let b=awayTeam.value.trim().toUpperCase();
+ let date=matchDate.value;
+ let time=matchTime.value;
+
+ if(!a||!b||a===b||!date||!time){
+  alert("Enter two different teams, a date and a kickoff time.");
+  return;
+ }
+
+ let kickoff=new Date(date+"T"+time+":00+00:00").getTime();
+
+ if(!Number.isFinite(kickoff)||kickoff<=Date.now()){
+  alert("Choose a future kickoff time.");
+  return;
+ }
+
+ let ids={};
+ for(let i=0;i<scoreList.length;i++){
+  let value=Number(document.getElementById("score"+i).value);
+  if(!Number.isFinite(value)||value<=1){
+   alert("All odds must be greater than 1.");
+   return;
+  }
+  ids[scoreList[i]]=value;
+ }
+
+ let odds={
+  "1":Number(o1.value),
+  "X":Number(ox.value),
+  "2":Number(o2.value),
+  "Over 2.5":Number(over.value),
+  "Under 2.5":Number(under.value),
+  ...ids
+ };
+
+ if(Object.values(odds).some(v=>!Number.isFinite(v)||v<=1)){
+  alert("Please enter valid odds greater than 1.");
+  return;
+ }
+
+ let gh=Number(finalHome.value),ga=Number(finalAway.value);
+ let durationMinutes=Number(duration.value);
+
+ if(!Number.isInteger(gh)||!Number.isInteger(ga)||gh<0||ga<0||gh>15||ga>15||!Number.isFinite(durationMinutes)||durationMinutes<1||durationMinutes>120){
+  alert("Enter valid scores and match duration.");
+  return;
+ }
+
+ data.matches.push({
+  id:Date.now().toString(),
+  home:a,away:b,kickoff,
+  end:kickoff+durationMinutes*60000,
+  duration:durationMinutes,
+  odds,
+  result:{home:gh,away:ga},
+  locked:false,
+  cancelled:false
+ });
+
+ save();
+ alert("Match created successfully. Its result is committed before betting opens.");
+ render();
+}
+
+function status(m){
+ let now=Date.now();
+ if(m.cancelled)return "CANCELLED";
+ if(now<m.kickoff)return "UPCOMING";
+ if(now<m.end)return "LIVE";
+ return "FINISHED";
+}
+
+function dateText(t){
+ return new Date(t).toLocaleString("en-GB",{
+  timeZone:"Africa/Accra",
+  dateStyle:"medium",
+  timeStyle:"short"
+ })+" GMT";
+}
+
+function settle(){
+ let changed=false;
+ data.matches.forEach(m=>{
+  if(!m.cancelled && Date.now()>=m.kickoff && !m.locked){
+   m.locked=true;
+   changed=true;
+  }
+ });
+
+ if(changed)save();
+
+ data.bets.forEach(b=>{
+  if(b.status!=="PENDING")return;
+  let m=data.matches.find(x=>x.id===b.matchId);
+  if(!m||m.cancelled){
+   b.status="VOID";
+   return;
+  }
+  if(status(m)!=="FINISHED")return;
+
+  let result=m.result;
+  let won=false;
+
+  if(b.market==="1X2"){
+   let actual=result.home>result.away?"1":
+    result.home===result.away?"X":"2";
+   won=b.pick===actual;
+  }
+
+  if(b.market==="Over / Under"){
+   let total=result.home+result.away;
+   won=b.pick==="Over 2.5"?total>2.5:total<2.5;
+  }
+
+  if(b.market==="Correct Score"){
+   won=b.pick===result.home+"-"+result.away ||
+    (b.pick==="Other" && !scoreList.slice(0,-1).includes(result.home+"-"+result.away));
+  }
+
+  b.status=won?"WON":"LOST";
+  if(won){
+   b.payout=b.stake*b.odds;
+   data.balance+=b.payout;
+  }
+ });
+ save();
+}
+
+function pick(matchId,market,pickName,odds){
+ let m=data.matches.find(x=>x.id===matchId);
+ if(!m||status(m)!=="UPCOMING"||m.locked){
+  alert("Betting is closed.");
+  return;
+ }
+ selection={matchId,market,pick:pickName,odds};
+ let stake=prompt("Enter stake in GH₵:");
+ if(stake===null)return;
+ stake=Number(stake);
+ if(!Number.isFinite(stake)||stake<=0||stake>data.balance){
+  alert("Invalid stake or insufficient demo balance.");
+  return;
+ }
+
+ if(!confirm("Confirm "+market+" selection: "+pickName+
+ " at odds "+odds+"? Stake: "+money(stake)))return;
+
+ data.balance-=stake;
+ data.bets.push({
+  id:Date.now().toString(),
+  ...selection,stake,
+  status:"PENDING",payout:0
+ });
+ selection=null;
+ save();
+ render();
+ alert("Demo bet placed successfully.");
+}
+
+function matchCard(m){
+ let s=status(m);
+ let disabled=s!=="UPCOMING"||m.locked;
+ let result=s==="FINISHED"?
+  `<div class="score" style="text-align:center">${m.result.home} - ${m.result.away}</div>`:"";
+
+ let oddsButton=(market,pick,odd)=>`
+ <button class="${selection&&selection.matchId===m.id&&selection.pick===pick&&selection.market===market?'selected':''}"
+ ${disabled?"disabled":""}
+ onclick="pick('${m.id}','${market}','${pick}',${odd})">
+ ${pick}<br><b>${odd.toFixed(2)}</b>
+ </button>`;
+
+ return `
+ <div class="card">
+ <div class="betrow">
+  <span class="muted">${dateText(m.kickoff)}</span>
+  <span class="status ${s==="LIVE"?"live":s==="FINISHED"?"finished":""}">${s}</span>
+ </div>
+ <div class="teams">
+  <div class="team">${m.home}</div>
+  <div class="vs">VS</div>
+  <div class="team">${m.away}</div>
+ </div>
+ ${result}
+ <div class="muted">${disabled?"Betting closed": "Betting closes at kickoff"}</div>
+
+ <div class="market">1X2</div>
+ <div class="odds">
+ ${oddsButton("1X2","1",m.odds["1"])}
+ ${oddsButton("1X2","X",m.odds.X)}
+ ${oddsButton("1X2","2",m.odds["2"])}
+ </div>
+
+ <div class="market">OVER / UNDER 2.5</div>
+ <div class="odds">
+ ${oddsButton("Over / Under","Over 2.5",m.odds["Over 2.5"])}
+ ${oddsButton("Over / Under","Under 2.5",m.odds["Under 2.5"])}
+ </div>
+
+ <div class="market">CORRECT SCORE</div>
+ <div class="odds" style="grid-template-columns:repeat(4,1fr)">
+ ${scoreList.map(sc=>oddsButton("Correct Score",sc,m.odds[sc])).join("")}
+ </div>
+ </div>`;
+}
+
+function render(){
+ settle();
+
+ document.getElementById("balance").textContent=money(data.balance);
+
+ let ordered=[...data.matches].sort((a,b)=>a.kickoff-b.kickoff);
+ document.getElementById("matches").innerHTML=
+ ordered.length?ordered.map(matchCard).join(""):
+ '<div class="card">No matches available yet. Check again soon.</div>';
+
+ document.getElementById("betHistory").innerHTML=
+ data.bets.length?[...data.bets].reverse().map(b=>{
+  let m=data.matches.find(x=>x.id===b.matchId);
+  return `<div class="card">
+  <b>${m?m.home+" vs "+m.away:"Match"}</b>
+  <div class="betrow"><span>${b.market}: ${b.pick}</span><b>${b.odds}</b></div>
+  <div class="betrow"><span>Stake: ${money(b.stake)}</span>
+  <span class="${b.status==="WON"?"green":b.status==="LOST"?"red":""}"><b>${b.status}</b></span></div>
+  ${b.status==="WON"?"<p class='green'>Payout: "+money(b.payout)+"</p>":""}
+  </div>`;
+ }).join(""):"<p>No bets yet.</p>";
+
+ if(admin){
+  document.getElementById("adminMatches").innerHTML=
+  ordered.map(m=>`
+   <div class="card">
+   <b>${m.home} vs ${m.away}</b>
+   <p class="muted">${dateText(m.kickoff)}</p>
+   <p>Status: ${status(m)}</p>
+   <p>Pre-committed result: ${m.result.home}-${m.result.away}</p>
+   ${m.cancelled?"":status(m)==="UPCOMING"?
+    `<button onclick="cancelMatch('${m.id}')">Cancel match</button>`:""}
+   </div>`).join("")||"No matches created.";
+ }
+}
+
+function cancelMatch(id){
+ let m=data.matches.find(x=>x.id===id);
+ if(!m||status(m)!=="UPCOMING")return;
+ if(!confirm("Cancel this match? Pending demo bets will be voided."))return;
+ m.cancelled=true;
+ data.bets.forEach(b=>{
+  if(b.matchId===id&&b.status==="PENDING"){
+   b.status="VOID";
+   data.balance+=b.stake;
+  }
+ });
+ save();
+ render();
+}
+
+setInterval(render,1000);
+render();
+</script>
+</body>
+</html>
+
